@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的云端工作台</title>
+<script src="config.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --sidebar-bg: #1a1a2e;
+  --sidebar-active: #16213e;
+  --main-bg: #f5f6fa;
+  --card-bg: #ffffff;
+  --text-primary: #2d3436;
+  --text-secondary: #636e72;
+  --accent: #6c5ce7;
+  --accent-light: #a29bfe;
+  --success: #00b894;
+  --warning: #fdcb6e;
+  --danger: #e17055;
+  --border: #dfe6e9;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --radius: 12px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--main-bg);
+  color: var(--text-primary);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+.sidebar {
+  width: 220px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.sidebar-logo { padding: 24px 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sidebar-logo span { color: var(--accent-light); }
+.nav-menu { flex: 1; padding: 16px 0; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  cursor: pointer; transition: all 0.2s; font-size: 14px; color: rgba(255,255,255,0.7);
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.nav-item.active { background: var(--sidebar-active); color: #fff; border-left: 3px solid var(--accent); padding-left: 17px; }
+.nav-icon { font-size: 18px; width: 24px; text-align: center; }
+.sidebar-footer { padding: 16px 20px; font-size: 12px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.1); }
+.main { flex: 1; overflow-y: auto; padding: 24px 32px; }
+.page { display: none; }
+.page.active { display: block; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.page-title { font-size: 24px; font-weight: 700; }
+.page-desc { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+.card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.stat-num { font-size: 32px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.welcome-banner {
+  background: linear-gradient(135deg, var(--accent), #a55eea);
+  color: #fff; border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+}
+.welcome-banner h2 { font-size: 22px; margin-bottom: 8px; }
+.welcome-banner p { opacity: 0.9; font-size: 14px; }
+.tool-list, .skill-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.tool-item, .skill-item {
+  background: var(--card-bg); border-radius: var(--radius); padding: 16px;
+  box-shadow: var(--shadow); transition: transform 0.15s; border: 1px solid transparent;
+}
+.tool-item:hover { transform: translateY(-2px); border-color: var(--accent-light); }
+.skill-item { border-left: 3px solid var(--accent); }
+.tool-name { font-weight: 600; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.tool-type { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--accent-light); color: #fff; }
+.tool-desc, .skill-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.tool-meta, .skill-source { font-size: 11px; color: #b2bec3; margin-top: 8px; }
+.search-box {
+  width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color 0.2s;
+}
+.search-box:focus { border-color: var(--accent); }
+.todo-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.todo-item:last-child { border-bottom: none; }
+.todo-checkbox { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.todo-checkbox.done { background: var(--success); border-color: var(--success); color: #fff; }
+.todo-text { flex: 1; font-size: 14px; }
+.todo-text.done { text-decoration: line-through; color: #b2bec3; }
+.todo-priority { font-size: 11px; padding: 2px 8px; border-radius: 8px; }
+.priority-high { background: #ff7675; color: #fff; }
+.priority-mid { background: #fdcb6e; color: #333; }
+.priority-low { background: #dfe6e9; color: #636e72; }
+.btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
+.btn:hover { opacity: 0.9; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-danger { background: var(--danger); color: #fff; }
+.form-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 10px; }
+.form-input:focus { border-color: var(--accent); }
+.form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.form-row .form-input { margin-bottom: 0; }
+.fav-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.fav-item:last-child { border-bottom: none; }
+.fav-name { font-weight: 500; font-size: 14px; }
+.fav-url { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.fav-tag { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: #e8e8ff; color: var(--accent); margin-left: 8px; }
+.habit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.habit-card { background: var(--card-bg); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); text-align: center; }
+.habit-circle { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; cursor: pointer; font-size: 20px; transition: all 0.2s; }
+.habit-circle.done { border-color: var(--success); background: #e8f8f5; }
+.habit-name { font-size: 14px; font-weight: 500; }
+.habit-count { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.finance-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.finance-card { background: var(--card-bg); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); text-align: center; }
+.finance-num { font-size: 22px; font-weight: 700; }
+.finance-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.empty-state { text-align: center; padding: 40px; color: #b2bec3; font-size: 14px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.badge-cloud { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #00b894; color: #fff; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">⚡ 我的<span>工作台</span><span class="badge-cloud">云端</span></div>
+  <div class="nav-menu">
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span> 仪表盘</div>
+    <div class="nav-item" data-page="tools"><span class="nav-icon">🛠️</span> 我的工具</div>
+    <div class="nav-item" data-page="skills"><span class="nav-icon">🧠</span> Skill 库</div>
+    <div class="nav-item" data-page="favorites"><span class="nav-icon">⭐</span> 收藏夹</div>
+    <div class="nav-item" data-page="todos"><span class="nav-icon">✅</span> 待办事项</div>
+    <div class="nav-item" data-page="notes"><span class="nav-icon">📝</span> 笔记</div>
+    <div class="nav-item" data-page="habits"><span class="nav-icon">📊</span> 习惯打卡</div>
+    <div class="nav-item" data-page="finance"><span class="nav-icon">💰</span> 记账</div>
+    <div class="nav-item" data-page="content"><span class="nav-icon">📅</span> 内容日历</div>
+  </div>
+  <div class="sidebar-footer">云端运行 · 数据存 GitHub 私有仓库</div>
+</div>
+
+<div class="main">
+  <div class="page active" id="page-dashboard">
+    <div class="welcome-banner">
+      <h2 id="greeting">你好 👋</h2>
+      <p id="dateStr">今天也要加油哦</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="statTools">--</div><div class="stat-label">我的工具</div></div>
+      <div class="stat-card"><div class="stat-num" id="statSkills">--</div><div class="stat-label">可用Skill</div></div>
+      <div class="stat-card"><div class="stat-num" id="statTodos">--</div><div class="stat-label">待办任务</div></div>
+      <div class="stat-card"><div class="stat-num" id="statFavs">--</div><div class="stat-label">收藏数</div></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="card"><div class="card-title">🔥 今日待办</div><div id="dashTodos"></div></div>
+      <div class="card"><div class="card-title">⭐ 最近收藏</div><div id="dashFavs"></div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-tools">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🛠️ 我的工具</div>
+        <div class="page-desc">手动维护的工具清单（已上云）</div>
+      </div>
+      <button class="btn btn-primary" onclick="showToolForm()">+ 添加工具</button>
+    </div>
+    <div class="card" id="toolForm" style="display:none;">
+      <div class="form-row">
+        <input class="form-input" id="toolName" placeholder="工具名称（如：n8n 自动化）">
+        <select class="form-input" id="toolType" style="width:130px;">
+          <option value="web">网页</option>
+          <option value="nodejs">Node.js</option>
+          <option value="python">Python</option>
+          <option value="docker">Docker</option>
+          <option value="folder">文件夹</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="toolDesc" placeholder="描述（可选）">
+        <button class="btn btn-primary" onclick="addTool()">保存</button>
+      </div>
+    </div>
+    <input class="search-box" id="toolSearch" placeholder="搜索工具名称或描述..." oninput="filterTools()">
+    <div class="tool-list" id="toolList"></div>
+  </div>
+
+  <div class="page" id="page-skills">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🧠 Skill 库</div>
+        <div class="page-desc">搜索匹配你需要的技能</div>
+      </div>
+      <button class="btn btn-primary" onclick="showSkillForm()">+ 添加Skill</button>
+    </div>
+    <div class="card" id="skillForm" style="display:none;">
+      <div class="form-row">
+        <input class="form-input" id="skillName" placeholder="Skill 名称">
+        <input class="form-input" id="skillDir" placeholder="目录名（可选）">
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="skillDesc" placeholder="功能描述（用于搜索匹配）">
+        <button class="btn btn-primary" onclick="addSkill()">保存</button>
+      </div>
+    </div>
+    <input class="search-box" id="skillSearch" placeholder="输入你想做什么，比如'帮我做PPT'..." oninput="searchSkills()">
+    <div class="skill-list" id="skillList"></div>
+  </div>
+
+  <div class="page" id="page-favorites">
+    <div class="page-header">
+      <div>
+        <div class="page-title">⭐ 收藏夹</div>
+        <div class="page-desc">收藏各种工具、链接、技能和信息</div>
+      </div>
+      <button class="btn btn-primary" onclick="showFavForm()">+ 添加收藏</button>
+    </div>
+    <div class="card" id="favForm" style="display:none;">
+      <div class="form-row">
+        <input class="form-input" id="favName" placeholder="名称（如：某好用工具）">
+        <input class="form-input" id="favUrl" placeholder="链接（可选）">
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="favTag" placeholder="标签（如：工具/教程/灵感）">
+        <button class="btn btn-primary" onclick="addFavorite()">保存</button>
+      </div>
+    </div>
+    <div class="card" id="favList"></div>
+  </div>
+
+  <div class="page" id="page-todos">
+    <div class="page-header">
+      <div>
+        <div class="page-title">✅ 待办事项</div>
+        <div class="page-desc">每日任务管理，完成打勾</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <input class="form-input" id="todoText" placeholder="要做什么？" onkeypress="if(event.key==='Enter')addTodo()">
+        <select class="form-input" id="todoPriority" style="width:120px;">
+          <option value="high">🔴 重要</option>
+          <option value="mid" selected>🟡 普通</option>
+          <option value="low">⚪ 次要</option>
+        </select>
+        <button class="btn btn-primary" onclick="addTodo()">添加</button>
+      </div>
+    </div>
+    <div class="card" id="todoList"></div>
+  </div>
+
+  <div class="page" id="page-notes">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📝 笔记</div>
+        <div class="page-desc">随手记录灵感、素材、想法</div>
+      </div>
+      <button class="btn btn-primary" onclick="showNoteForm()">+ 写笔记</button>
+    </div>
+    <div class="card" id="noteForm" style="display:none;">
+      <input class="form-input" id="noteTitle" placeholder="标题">
+      <textarea class="form-input" id="noteContent" rows="4" placeholder="内容..."></textarea>
+      <button class="btn btn-primary" onclick="addNote()">保存</button>
+    </div>
+    <div id="noteList"></div>
+  </div>
+
+  <div class="page" id="page-habits">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📊 习惯打卡</div>
+        <div class="page-desc">养成好习惯，每天坚持</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <input class="form-input" id="habitName" placeholder="新习惯名称（如：喝水、运动、阅读）">
+        <button class="btn btn-primary" onclick="addHabit()">添加</button>
+      </div>
+    </div>
+    <div class="habit-grid" id="habitGrid"></div>
+  </div>
+
+  <div class="page" id="page-finance">
+    <div class="page-header">
+      <div>
+        <div class="page-title">💰 记账</div>
+        <div class="page-desc">简单记录日常收支</div>
+      </div>
+    </div>
+    <div class="finance-summary">
+      <div class="finance-card"><div class="finance-num" style="color:var(--danger)" id="totalExpense">¥0</div><div class="finance-label">本月支出</div></div>
+      <div class="finance-card"><div class="finance-num" style="color:var(--success)" id="totalIncome">¥0</div><div class="finance-label">本月收入</div></div>
+      <div class="finance-card"><div class="finance-num" id="balance">¥0</div><div class="finance-label">结余</div></div>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <select class="form-input" id="finType" style="width:100px;">
+          <option value="expense">支出</option>
+          <option value="income">收入</option>
+        </select>
+        <input class="form-input" id="finAmount" type="number" placeholder="金额">
+        <input class="form-input" id="finNote" placeholder="备注（如：午饭）">
+        <button class="btn btn-primary" onclick="addFinance()">记一笔</button>
+      </div>
+    </div>
+    <div class="card" id="financeList"></div>
+  </div>
+
+  <div class="page" id="page-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📅 内容日历</div>
+        <div class="page-desc">自媒体内容排期管理</div>
+      </div>
+      <button class="btn btn-primary" onclick="showContentForm()">+ 添加排期</button>
+    </div>
+    <div class="card" id="contentForm" style="display:none;">
+      <div class="form-row">
+        <input class="form-input" id="contentTitle" placeholder="内容标题">
+        <input class="form-input" id="contentPlatform" placeholder="平台（抖音/小红书/视频号）">
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="contentDate" type="date">
+        <select class="form-input" id="contentStatus" style="width:120px;">
+          <option value="idea">💡 灵感</option>
+          <option value="writing">✍️ 撰写中</option>
+          <option value="shooting">🎬 拍摄中</option>
+          <option value="done">✅ 已发布</option>
+        </select>
+        <button class="btn btn-primary" onclick="addContent()">保存</button>
+      </div>
+    </div>
+    <div class="card" id="contentList"></div>
+  </div>
+</div>
+
+<script>
+// ============ GitHub 配置 ============
+const CFG = window.WORKBENCH_CONFIG || {};
+const API = "https://api.github.com/repos";
+const OWNER = CFG.owner || "";
+const DATA_REPO = CFG.dataRepo || "";
+const BRANCH = CFG.branch || "main";
+const TOKEN = CFG.token || "";
+
+// 数据文件名 ↔ 默认值
+const DATA_FILES = {
+  todos: [],
+  favorites: [],
+  notes: [],
+  habits: [],
+  finance: [],
+  content_calendar: [],
+  tools: [],
+  skills: []
+};
+
+// ============ 数据层（GitHub Contents API） ============
+async function readData(name) {
+  const url = `${API}/${OWNER}/${DATA_REPO}/contents/data/${name}.json?ref=${BRANCH}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github+json" }
+  });
+  if (res.status === 404) return JSON.parse(JSON.stringify(DATA_FILES[name] || []));
+  if (!res.ok) throw new Error(`读取数据失败 ${res.status}`);
+  const json = await res.json();
+  return JSON.parse(decodeURIComponent(escape(atob(json.content))));
+}
+
+async function writeData(name, data) {
+  const path = `data/${name}.json`;
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  // 先取当前 sha
+  let sha = null;
+  const getRes = await fetch(`${API}/${OWNER}/${DATA_REPO}/contents/${path}?ref=${BRANCH}`, {
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github+json" }
+  });
+  if (getRes.ok) {
+    const existing = await getRes.json();
+    sha = existing.sha;
+  }
+  const body = { message: `update ${name}`, content };
+  if (sha) body.sha = sha;
+  const putRes = await fetch(`${API}/${OWNER}/${DATA_REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  if (!putRes.ok) throw new Error(`保存数据失败 ${putRes.status}`);
+}
+
+// ============ 全局状态 ============
+let allTools = [], allSkills = [], allTodos = [], allFavs = [], allNotes = [], allHabits = [], allFinance = [], allContent = [];
+const DB_READY = !!(OWNER && DATA_REPO && TOKEN);
+
+// ============ 导航 ============
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// ============ 初始化 ============
+async function init() {
+  if (!DB_READY) {
+    document.getElementById('greeting').textContent = '⚠️ 未配置';
+    document.getElementById('dateStr').textContent = '请在 config.js 填入 owner / dataRepo / token';
+    return;
+  }
+  const now = new Date();
+  const hour = now.getHours();
+  const greet = hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好';
+  document.getElementById('greeting').textContent = `${greet} 👋`;
+  document.getElementById('dateStr').textContent = now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+  try {
+    await Promise.all([loadTools(), loadSkills(), loadTodos(), loadFavorites(), loadNotes(), loadHabits(), loadFinance(), loadContent()]);
+    updateDashboard();
+  } catch (e) {
+    document.getElementById('greeting').textContent = '⚠️ 连接失败';
+    document.getElementById('dateStr').textContent = e.message + '，请检查 config.js 配置';
+  }
+}
+
+// ============ 仪表盘 ============
+function updateDashboard() {
+  document.getElementById('statTools').textContent = allTools.length;
+  document.getElementById('statSkills').textContent = allSkills.length;
+  document.getElementById('statTodos').textContent = allTodos.filter(t => !t.done).length;
+  document.getElementById('statFavs').textContent = allFavs.length;
+  const dashTodos = allTodos.filter(t => !t.done).slice(0, 5);
+  document.getElementById('dashTodos').innerHTML = dashTodos.length
+    ? dashTodos.map(t => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">☐ ${t.text}</div>`).join('')
+    : '<div class="empty-state">🎉 全部搞定了！</div>';
+  document.getElementById('dashFavs').innerHTML = allFavs.slice(0, 5).map(f =>
+    `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">⭐ ${f.name}</div>`
+  ).join('') || '<div class="empty-state">还没有收藏</div>';
+}
+
+// ============ 工具 ============
+async function loadTools() {
+  allTools = await readData('tools');
+  renderTools(allTools);
+}
+function renderTools(tools) {
+  document.getElementById('toolList').innerHTML = tools.map((t, i) => `
+    <div class="tool-item">
+      <div class="tool-name">${t.name} <span class="tool-type">${t.type || 'other'}</span></div>
+      <div class="tool-desc">${t.desc || '暂无描述'}</div>
+      <div class="tool-meta">${t.modified || ''}
+        <button class="btn btn-sm btn-danger" style="float:right;" onclick="delTool(${i})">删除</button>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state">还没有工具，点击右上角添加</div>';
+}
+function filterTools() {
+  const q = document.getElementById('toolSearch').value.toLowerCase();
+  renderTools(allTools.filter(t => t.name.toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q)));
+}
+function showToolForm() { document.getElementById('toolForm').style.display = 'block'; }
+async function addTool() {
+  const name = document.getElementById('toolName').value.trim();
+  if (!name) return alert('请输入工具名称');
+  allTools.push({
+    name,
+    type: document.getElementById('toolType').value,
+    desc: document.getElementById('toolDesc').value.trim(),
+    modified: new Date().toLocaleDateString('zh-CN')
+  });
+  await writeData('tools', allTools);
+  document.getElementById('toolName').value = '';
+  document.getElementById('toolDesc').value = '';
+  document.getElementById('toolForm').style.display = 'none';
+  loadTools(); updateDashboard();
+}
+async function delTool(idx) {
+  allTools.splice(idx, 1);
+  await writeData('tools', allTools);
+  loadTools(); updateDashboard();
+}
+
+// ============ Skill ============
+async function loadSkills() {
+  allSkills = await readData('skills');
+  renderSkills(allSkills.slice(0, 100));
+}
+function renderSkills(skills) {
+  document.getElementById('skillList').innerHTML = skills.map((s, i) => `
+    <div class="skill-item">
+      <div class="skill-name">${s.name}</div>
+      <div class="skill-desc">${s.description || '暂无描述'}</div>
+      <div class="skill-source">📁 ${s.dirName || s.dir_name || ''}
+        <button class="btn btn-sm btn-danger" style="float:right;" onclick="delSkill(${i})">删除</button>
+      </div>
+    </div>
+  `).join('') || '<div class="empty-state">没有匹配的Skill</div>';
+}
+function searchSkills() {
+  const q = document.getElementById('skillSearch').value.toLowerCase();
+  if (!q.trim()) { renderSkills(allSkills.slice(0, 100)); return; }
+  renderSkills(allSkills.filter(s =>
+    s.name.toLowerCase().includes(q) ||
+    (s.description||'').toLowerCase().includes(q) ||
+    (s.dirName||s.dir_name||'').toLowerCase().includes(q)
+  ).slice(0, 100));
+}
+function showSkillForm() { document.getElementById('skillForm').style.display = 'block'; }
+async function addSkill() {
+  const name = document.getElementById('skillName').value.trim();
+  if (!name) return alert('请输入 Skill 名称');
+  allSkills.push({
+    name,
+    dirName: document.getElementById('skillDir').value.trim(),
+    description: document.getElementById('skillDesc').value.trim(),
+    source: '手动添加'
+  });
+  await writeData('skills', allSkills);
+  document.getElementById('skillName').value = '';
+  document.getElementById('skillDir').value = '';
+  document.getElementById('skillDesc').value = '';
+  document.getElementById('skillForm').style.display = 'none';
+  loadSkills(); updateDashboard();
+}
+async function delSkill(idx) {
+  allSkills.splice(idx, 1);
+  await writeData('skills', allSkills);
+  loadSkills(); updateDashboard();
+}
+
+// ============ 收藏夹 ============
+async function loadFavorites() {
+  allFavs = await readData('favorites');
+  renderFavs();
+}
+function renderFavs() {
+  document.getElementById('favList').innerHTML = allFavs.map((f, i) => `
+    <div class="fav-item">
+      <div>
+        <div class="fav-name">${f.name} <span class="fav-tag">${f.tag||'未分类'}</span></div>
+        ${f.url ? `<div class="fav-url"><a href="${f.url}" target="_blank">${f.url}</a></div>` : ''}
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="delFavorite(${i})">删除</button>
+    </div>
+  `).join('') || '<div class="empty-state">还没有收藏，点击右上角添加</div>';
+}
+function showFavForm() { document.getElementById('favForm').style.display = 'block'; }
+async function addFavorite() {
+  const name = document.getElementById('favName').value.trim();
+  if (!name) return alert('请输入名称');
+  allFavs.unshift({
+    name,
+    url: document.getElementById('favUrl').value.trim(),
+    tag: document.getElementById('favTag').value.trim(),
+    createdAt: new Date().toISOString()
+  });
+  await writeData('favorites', allFavs);
+  document.getElementById('favName').value = '';
+  document.getElementById('favUrl').value = '';
+  document.getElementById('favTag').value = '';
+  document.getElementById('favForm').style.display = 'none';
+  loadFavorites(); updateDashboard();
+}
+async function delFavorite(idx) {
+  allFavs.splice(idx, 1);
+  await writeData('favorites', allFavs);
+  loadFavorites(); updateDashboard();
+}
+
+// ============ 待办 ============
+async function loadTodos() {
+  allTodos = await readData('todos');
+  renderTodos();
+}
+function renderTodos() {
+  document.getElementById('todoList').innerHTML = allTodos.map((t, i) => `
+    <div class="todo-item">
+      <div class="todo-checkbox ${t.done?'done':''}" onclick="toggleTodo(${i})">${t.done?'✓':''}</div>
+      <div class="todo-text ${t.done?'done':''}">${t.text}</div>
+      <span class="todo-priority priority-${t.priority||'mid'}">${t.priority==='high'?'重要':t.priority==='low'?'次要':'普通'}</span>
+      <button class="btn btn-sm btn-danger" onclick="delTodo(${i})">×</button>
+    </div>
+  `).join('') || '<div class="empty-state">暂无待办</div>';
+}
+async function addTodo() {
+  const text = document.getElementById('todoText').value.trim();
+  if (!text) return;
+  allTodos.unshift({ text, priority: document.getElementById('todoPriority').value, done: false, createdAt: new Date().toISOString() });
+  await writeData('todos', allTodos);
+  document.getElementById('todoText').value = '';
+  loadTodos(); updateDashboard();
+}
+async function toggleTodo(idx) {
+  allTodos[idx].done = !allTodos[idx].done;
+  await writeData('todos', allTodos);
+  loadTodos(); updateDashboard();
+}
+async function delTodo(idx) {
+  allTodos.splice(idx, 1);
+  await writeData('todos', allTodos);
+  loadTodos(); updateDashboard();
+}
+
+// ============ 笔记 ============
+async function loadNotes() {
+  allNotes = await readData('notes');
+  renderNotes();
+}
+function renderNotes() {
+  document.getElementById('noteList').innerHTML = allNotes.map((n, i) => `
+    <div class="card">
+      <div class="card-title">${n.title} <span style="font-size:12px;color:#b2bec3;font-weight:normal;">${n.createdAt || ''}</span></div>
+      <div style="font-size:14px;white-space:pre-wrap;line-height:1.6;">${n.content}</div>
+      <div style="margin-top:12px;"><button class="btn btn-sm btn-danger" onclick="delNote(${i})">删除</button></div>
+    </div>
+  `).join('') || '<div class="empty-state">还没有笔记</div>';
+}
+function showNoteForm() { document.getElementById('noteForm').style.display = 'block'; }
+async function addNote() {
+  const title = document.getElementById('noteTitle').value.trim();
+  const content = document.getElementById('noteContent').value.trim();
+  if (!title) return alert('请输入标题');
+  allNotes.unshift({ title, content, createdAt: new Date().toLocaleString('zh-CN') });
+  await writeData('notes', allNotes);
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteContent').value = '';
+  document.getElementById('noteForm').style.display = 'none';
+  loadNotes();
+}
+async function delNote(idx) {
+  allNotes.splice(idx, 1);
+  await writeData('notes', allNotes);
+  loadNotes();
+}
+
+// ============ 习惯打卡 ============
+async function loadHabits() {
+  allHabits = await readData('habits');
+  renderHabits();
+}
+function renderHabits() {
+  const today = new Date().toDateString();
+  document.getElementById('habitGrid').innerHTML = allHabits.map((h, i) => {
+    const days = (h.days || []).map(String);
+    const done = days.includes(today);
+    return `
+      <div class="habit-card">
+        <div class="habit-circle ${done?'done':''}" onclick="toggleHabit(${i})">${done?'✓':'○'}</div>
+        <div class="habit-name">${h.name}</div>
+        <div class="habit-count">已打卡 ${days.length} 天</div>
+      </div>
+    `;
+  }).join('') || '<div class="empty-state">还没有添加习惯</div>';
+}
+async function addHabit() {
+  const name = document.getElementById('habitName').value.trim();
+  if (!name) return;
+  allHabits.push({ name, days: [] });
+  await writeData('habits', allHabits);
+  document.getElementById('habitName').value = '';
+  loadHabits();
+}
+async function toggleHabit(idx) {
+  const today = new Date().toDateString();
+  let days = (allHabits[idx].days || []).map(String);
+  allHabits[idx].days = days.includes(today) ? days.filter(d => d !== today) : [...days, today];
+  await writeData('habits', allHabits);
+  loadHabits();
+}
+
+// ============ 记账 ============
+async function loadFinance() {
+  allFinance = await readData('finance');
+  renderFinance();
+}
+function renderFinance() {
+  const now = new Date();
+  let expense = 0, income = 0;
+  allFinance.forEach(r => {
+    const d = r.date ? new Date(r.date) : new Date();
+    if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+      if (r.type === 'expense') expense += Number(r.amount) || 0;
+      else income += Number(r.amount) || 0;
+    }
+  });
+  document.getElementById('totalExpense').textContent = '¥' + expense.toFixed(2);
+  document.getElementById('totalIncome').textContent = '¥' + income.toFixed(2);
+  document.getElementById('balance').textContent = '¥' + (income - expense).toFixed(2);
+  document.getElementById('financeList').innerHTML = allFinance.slice(0, 30).map((r, i) => `
+    <div class="fav-item">
+      <div>
+        <div class="fav-name" style="color:${r.type==='expense'?'var(--danger)':'var(--success)'}">
+          ${r.type==='expense'?'-':'+'} ¥${r.amount}
+        </div>
+        <div class="fav-url">${r.note||''} · ${r.date}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="delFinance(${i})">删除</button>
+    </div>
+  `).join('') || '<div class="empty-state">还没有记账记录</div>';
+}
+async function addFinance() {
+  const amount = document.getElementById('finAmount').value;
+  if (!amount) return alert('请输入金额');
+  allFinance.unshift({
+    amount,
+    type: document.getElementById('finType').value,
+    note: document.getElementById('finNote').value.trim(),
+    date: new Date().toISOString().slice(0, 10)
+  });
+  await writeData('finance', allFinance);
+  document.getElementById('finAmount').value = '';
+  document.getElementById('finNote').value = '';
+  loadFinance();
+}
+async function delFinance(idx) {
+  allFinance.splice(idx, 1);
+  await writeData('finance', allFinance);
+  loadFinance();
+}
+
+// ============ 内容日历 ============
+async function loadContent() {
+  allContent = await readData('content_calendar');
+  renderContent();
+}
+function renderContent() {
+  const statusMap = { idea:'💡 灵感', writing:'✍️ 撰写中', shooting:'🎬 拍摄中', done:'✅ 已发布' };
+  document.getElementById('contentList').innerHTML = allContent.map((c, i) => `
+    <div class="fav-item">
+      <div>
+        <div class="fav-name">${c.title}</div>
+        <div class="fav-url">📱 ${c.platform||'未指定'} · 📅 ${c.date||'未排期'} · ${statusMap[c.status]||c.status}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="delContent(${i})">删除</button>
+    </div>
+  `).join('') || '<div class="empty-state">还没有内容排期</div>';
+}
+function showContentForm() { document.getElementById('contentForm').style.display = 'block'; }
+async function addContent() {
+  const title = document.getElementById('contentTitle').value.trim();
+  if (!title) return alert('请输入标题');
+  allContent.unshift({
+    title,
+    platform: document.getElementById('contentPlatform').value.trim(),
+    date: document.getElementById('contentDate').value,
+    status: document.getElementById('contentStatus').value,
+    createdAt: new Date().toISOString()
+  });
+  await writeData('content_calendar', allContent);
+  document.getElementById('contentTitle').value = '';
+  document.getElementById('contentPlatform').value = '';
+  document.getElementById('contentDate').value = '';
+  document.getElementById('contentForm').style.display = 'none';
+  loadContent();
+}
+async function delContent(idx) {
+  allContent.splice(idx, 1);
+  await writeData('content_calendar', allContent);
+  loadContent();
+}
+
+init();
+</script>
+</body>
+</html>

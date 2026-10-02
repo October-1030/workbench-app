@@ -371,7 +371,8 @@ async function readData(name) {
   if (res.status === 404) return JSON.parse(JSON.stringify(DATA_FILES[name] || []));
   if (!res.ok) throw new Error(`读取数据失败 ${res.status}`);
   const json = await res.json();
-  return JSON.parse(decodeURIComponent(escape(atob(json.content))));
+  const raw = decodeURIComponent(escape(atob(json.content))).replace(/^\uFEFF/, "");
+  return JSON.parse(raw);
 }
 
 async function writeData(name, data) {

@@ -140,7 +140,7 @@ body {
     <div class="nav-item" data-page="finance"><span class="nav-icon">💰</span> 记账</div>
     <div class="nav-item" data-page="content"><span class="nav-icon">📅</span> 内容日历</div>
   </div>
-  <div class="sidebar-footer">云端运行 · 数据存 GitHub 私有仓库</div>
+  <div class="sidebar-footer">云端运行 · 数据存 GitHub 私有仓库<br><a href="javascript:resetToken()" style="color:rgba(255,255,255,0.5);font-size:11px;">更换访问钥匙</a></div>
 </div>
 
 <div class="main">
@@ -347,7 +347,8 @@ const API = "https://api.github.com/repos";
 const OWNER = CFG.owner || "";
 const DATA_REPO = CFG.dataRepo || "";
 const BRANCH = CFG.branch || "main";
-const TOKEN = CFG.token || "";
+// token 优先从浏览器本地存储读取（打开页面时输入一次），不放进仓库
+const TOKEN = localStorage.getItem("wb_token") || (CFG.token || "");
 
 // 数据文件名 ↔ 默认值
 const DATA_FILES = {
@@ -416,8 +417,14 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ============ 初始化 ============
 async function init() {
   if (!DB_READY) {
-    document.getElementById('greeting').textContent = '⚠️ 未配置';
-    document.getElementById('dateStr').textContent = '请在 config.js 填入 owner / dataRepo / token';
+    // 未设置钥匙：显示输入界面
+    document.getElementById('greeting').textContent = '🔑 首次使用：输入你的访问钥匙';
+    document.getElementById('dateStr').innerHTML = `
+      <div style="max-width:420px;margin-top:10px;text-align:left;">
+        <input class="form-input" id="setupToken" placeholder="粘贴 github_pat_ 开头的钥匙" style="font-size:13px;">
+        <button class="btn btn-primary" onclick="saveToken()">连接工作台</button>
+        <div style="font-size:12px;opacity:0.8;margin-top:8px;">钥匙只保存在当前浏览器里，不会上传到任何地方。换设备/换浏览器时重新输入一次即可。</div>
+      </div>`;
     return;
   }
   const now = new Date();
@@ -430,8 +437,20 @@ async function init() {
     updateDashboard();
   } catch (e) {
     document.getElementById('greeting').textContent = '⚠️ 连接失败';
-    document.getElementById('dateStr').textContent = e.message + '，请检查 config.js 配置';
+    document.getElementById('dateStr').textContent = e.message + '，检查钥匙是否正确或是否过期';
   }
+}
+
+// ============ 保存钥匙 ============
+function saveToken() {
+  const t = document.getElementById('setupToken').value.trim();
+  if (!t) return alert('请粘贴你的钥匙');
+  localStorage.setItem("wb_token", t);
+  location.reload();
+}
+function resetToken() {
+  localStorage.removeItem("wb_token");
+  location.reload();
 }
 
 // ============ 仪表盘 ============
